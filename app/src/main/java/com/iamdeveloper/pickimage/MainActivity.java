@@ -6,9 +6,11 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.Image;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PersistableBundle;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.design.widget.CoordinatorLayout;
@@ -22,15 +24,20 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ImageView;
+import android.widget.MediaController;
 import android.widget.Toast;
+import android.widget.VideoView;
 
 import java.io.File;
 
 public class MainActivity extends AppCompatActivity {
     private static final int MY_PERMISSION_READ_EXTERNAL_STORAGE = 1;
     private static final int SELECT_IMAGE = 1;
-    CoordinatorLayout coordinator;
-    ImageView imageView;
+    private int position;
+    private CoordinatorLayout coordinator;
+    private VideoView videoView;
+    private MediaController mediaController;
+    private String realPath;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -38,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         coordinator = (CoordinatorLayout) findViewById(R.id.coordinator);
-        imageView = (ImageView) findViewById(R.id.image);
+        videoView = (VideoView) findViewById(R.id.video);
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -55,10 +62,10 @@ public class MainActivity extends AppCompatActivity {
                                 MY_PERMISSION_READ_EXTERNAL_STORAGE);
                         return;
                     }
-                    onPickImage();
+                    onPickVideo();
                 }else{
                     Toast.makeText(view.getContext(),""+Build.VERSION.SDK_INT,Toast.LENGTH_LONG).show();
-                    onPickImage();
+                    onPickVideo();
                 }
 
             }
@@ -93,7 +100,7 @@ public class MainActivity extends AppCompatActivity {
         switch (requestCode) {
             case MY_PERMISSION_READ_EXTERNAL_STORAGE: {
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    onPickImage();
+                    onPickVideo();
                 }else{
 
                     Snackbar.make(coordinator,"คุณต้องทำการอนุญาตให้เขาถึงไฟล์",Snackbar.LENGTH_INDEFINITE)
@@ -117,11 +124,40 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void onPickImage(){
+    private void onPickVideo(){
         Intent i = new Intent();
-        i.setType("image/*");
+        i.setType("video/*");
         i.setAction(Intent.ACTION_GET_CONTENT);
         startActivityForResult(Intent.createChooser(i,"SELECT IMAGE"),SELECT_IMAGE);
+    }
+
+    private void onSettingVideo(String path){
+        if(mediaController == null){
+            mediaController = new MediaController(this);
+            mediaController.setAnchorView(videoView);
+            videoView.setMediaController(mediaController);
+        }
+        videoView.setVideoPath(path);
+        videoView.requestFocus();
+        videoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+            @Override
+            public void onPrepared(final MediaPlayer mediaPlayer) {
+                Log.i("VideoTime",(mediaPlayer.getDuration()/1000) % 60 +"");
+                videoView.seekTo(position);
+                if (position == 0) {
+                    videoView.start();
+                }else {
+                    videoView.pause();
+                }
+                mediaPlayer.setOnVideoSizeChangedListener(new MediaPlayer.OnVideoSizeChangedListener() {
+                    @Override
+                    public void onVideoSizeChanged(MediaPlayer mediaPlayer, int i, int i1) {
+                        mediaController.setAnchorView(videoView);
+                    }
+                });
+
+            }
+        });
     }
 
     @Override
@@ -132,12 +168,31 @@ public class MainActivity extends AppCompatActivity {
                 if(Build.VERSION.SDK_INT > 19){
                     Uri uri = data.getData();
                     Log.i("requestCode",uri.toString());
-                    String realPatch;
-                    realPatch = RealPath.getRealPatchFromURI_API19(this,uri);
-                    Log.i("realpatch",realPatch);
-                    imageView.setImageURI(Uri.fromFile(new File(realPatch)));
+                    realPath = RealPath.getRealPatchFromURI_API19(this,uri);
+                    Log.i("realpatch",realPath);
+                    onSettingVideo(realPath);
+
                 }
             }
         }
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString("PATH",realPath);
+        outState.putInt("TIME",videoView.getCurrentPosition());
+        videoView.pause();
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        position = savedInstanceState.getInt("TIME");
+        realPath = savedInstanceState.getString("PATH");
+        Log.i("TIME",position+"");
+        onSettingVideo(realPath);
+        videoView.seekTo(position);
+
     }
 }

@@ -20,12 +20,12 @@ public class RealPath {
         Log.i("wholeID",wholeID);
         String id = wholeID.split(":")[1];
         Log.i("id",id);
-        String[] column = {MediaStore.Images.Media.DATA};
+        String[] column = {MediaStore.Video.Media.DATA};
         Log.i("column",column[0]);
-        String sel = MediaStore.Images.Media._ID + "=?";
+        String sel = MediaStore.Video.Media._ID + "=?";
         Log.i("sel",sel);
         Cursor cursor = context.getContentResolver().query
-                (MediaStore.Images.Media.EXTERNAL_CONTENT_URI,column,sel,new String[]{id},null);
+                (MediaStore.Video.Media.EXTERNAL_CONTENT_URI,column,sel,new String[]{id},null);
         assert cursor != null;
         int columnIndex = cursor.getColumnIndex(column[0]);
         if(cursor.moveToFirst()){

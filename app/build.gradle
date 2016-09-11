@@ -5,7 +5,7 @@ android {
     buildToolsVersion "24.0.1"
 
     defaultConfig {
-        applicationId "com.iamdeveloper.pickimage"
+        applicationId "com.iamdeveloper.pickvideo"
         minSdkVersion 17
         targetSdkVersion 24
         versionCode 1
